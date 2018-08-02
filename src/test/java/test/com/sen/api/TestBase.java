@@ -17,6 +17,7 @@ import com.sen.api.beans.BaseBean;
 import com.sen.api.utils.AssertUtil;
 import com.sen.api.utils.ExcelUtil;
 import com.sen.api.utils.FunctionUtil;
+import com.sen.api.utils.JsonUtil;
 import com.sen.api.utils.ReportUtil;
 import com.sen.api.utils.StringUtil;
 
@@ -36,12 +37,13 @@ public class TestBase {
 	 * 截取自定义方法正则表达式：__xxx(ooo)
 	 */
 	protected Pattern funPattern = Pattern
-			.compile("__(\\w*?)\\((([\\w\\\\\\/:\\.\\$]*,?)*)\\)");// __(\\w*?)\\((((\\w*)|(\\w*,))*)\\)
-																	// __(\\w*?)\\(((\\w*,?\\w*)*)\\)
-
+			.compile("__(\\w*?)\\((([\\w\\\\\\/:\\.\\$]*,?)*)\\)");
+	
 	protected void setSaveDates(Map<String, String> map) {
 		saveDatas.putAll(map);
 	}
+	
+	protected boolean isLogin = false;
 
 	/**
 	 * 组件预参数（处理__fucn()以及${xxxx}）
@@ -131,28 +133,26 @@ public class TestBase {
 		}
 	}
 
-	protected void verifyResult(String sourchData, String verifyStr,
-			boolean contains) {
-		if (StringUtil.isEmpty(verifyStr)) {
+	protected void verifyReponseBody(String sourceData, String[] verifyStr,boolean contains) {
+		if (verifyStr == null || verifyStr.length == 0) {
 			return;
 		}
-		String allVerify = getCommonParam(verifyStr);
-		ReportUtil.log("验证数据：" + allVerify);
-		if (contains) {
-			// 验证结果包含
-			AssertUtil.contains(sourchData, allVerify);
-		} else {
-			// 通过';'分隔，通过jsonPath进行一一校验
-			Pattern pattern = Pattern.compile("([^;]*)=([^;]*)");
-			Matcher m = pattern.matcher(allVerify.trim());
-			while (m.find()) {
-				String actualValue = getBuildValue(sourchData, m.group(1));
-				String exceptValue = getBuildValue(sourchData, m.group(2));
-				ReportUtil.log(String.format("验证转换后的值%s=%s", actualValue,
-						exceptValue));
-				Assert.assertEquals(actualValue, exceptValue, "验证预期结果失败。");
+		//String[] str = verifyStr.split("\n");
+		for(String str: verifyStr) {
+			ReportUtil.log("验证数据：" + str);
+			int index = str.indexOf("=");
+			String exceptValue = str.substring(index+1, str.length());
+			str = str.substring(0,index);
+			String[] strArray = str.split("\\.");
+			List<String> jsonPath = new ArrayList<>();
+			for(int i = 2; i< strArray.length; i++) {
+				jsonPath.add(strArray[i]);
 			}
+			String actualValue = JsonUtil.getJsonObject(sourceData, jsonPath);
+			ReportUtil.log("actualValue:" + actualValue + ", exceptValue:" + exceptValue);
+			Assert.assertEquals(actualValue, exceptValue, "验证预期结果失败。");
 		}
+		
 	}
 
 	/**

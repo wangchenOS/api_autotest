@@ -2,7 +2,9 @@ package com.sen.api.beans;
 
 public class ApiDataBean extends BaseBean {
 	private boolean run;
-	private String desc; // 接口描述
+	
+	// 接口描述
+	private String desc; 
 	private String url;
 	private String method;
 	private String param;
@@ -12,7 +14,7 @@ public class ApiDataBean extends BaseBean {
 	private String save;
 	private String preParam;
 	private int sleep;
-
+	
 	public boolean isRun() {
 		return run;
 	}

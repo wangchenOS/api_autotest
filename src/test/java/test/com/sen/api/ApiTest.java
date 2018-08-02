@@ -26,10 +26,12 @@ import org.testng.annotations.*;
 import org.testng.annotations.Optional;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 
 @Listeners({ AutoTestListener.class, RetryListener.class })
@@ -49,6 +51,8 @@ public class ApiTest extends TestBase {
 	 * 所有公共header，会在发送请求的时候添加到http header上
 	 */
 	private static Header[] publicHeaders;
+	
+	private Map<String,String> loginParam = new HashMap<String, String>();
 
 	/**
 	 * 是否使用form-data传参 会在post与put方法封装请求参数用到
@@ -65,7 +69,7 @@ public class ApiTest extends TestBase {
 	 */
 	protected List<ApiDataBean> dataList = new ArrayList<ApiDataBean>();
 
-	private static HttpClient client;
+	private static MyCookieHttpClient client;
 
 	/**
 	 * 初始化测试数据
@@ -76,6 +80,7 @@ public class ApiTest extends TestBase {
 	@BeforeSuite
 	public void init(@Optional("api-config.xml") String envName) throws Exception {
 		String configFilePath = Paths.get(System.getProperty("user.dir"), envName).toString();
+		ReportUtil.log("envName:" + envName);
 		ReportUtil.log("api config path:" + configFilePath);
 		apiConfig = new ApiConfig(configFilePath);
 		// 获取基础数据
@@ -95,15 +100,71 @@ public class ApiTest extends TestBase {
 			headers.add(header);
 		});
 		publicHeaders = headers.toArray(new Header[headers.size()]);
-		client = new SSLClient();
-		client.getParams().setParameter(
-				CoreConnectionPNames.CONNECTION_TIMEOUT, 60000); // 请求超时
-		client.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, 60000); // 读取超时
+		
+		boolean isLogin = apiConfig.isLogin();
+		if (isLogin) {
+			loginParam = apiConfig.getLoginParams();
+		}
+		client = new MyCookieHttpClient();
+		client.setHeaders(publicHeaders);
+		if(isLogin) {
+			login();
+		}
 	}
 
+	
+	private void login()
+	{
+		String imageUrl = loginParam.get("identifyCode");
+		ClientWrapper clientWrapper = null;
+	
+		while (true) {
+			try {
+				clientWrapper = client.sendHttpGetBinary(imageUrl, false);
+				
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+			
+			String identifyCodePicPath = "captcha.jpg";
+			DownLoadPic.downloadPic(clientWrapper,identifyCodePicPath);
+			try {
+				MyImgFilter.savePic(identifyCodePicPath);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			
+			String identifyCode = MyImgFilter.doOCR("captcha_result.jpg");
+	
+			identifyCode = MyImgFilter.formatImageStr(identifyCode);
+			ReportUtil.log("identifyCode Str:" + identifyCode);
+			
+			if (!MyImgFilter.checkImageStr(identifyCode)) {
+				continue;
+			}
+			else {
+				Map<String, String> loginMap = new HashMap<String, String>();
+				loginMap.put("userName",loginParam.get("userName"));
+				loginMap.put("password",loginParam.get("password"));
+				loginMap.put("identifyCode",identifyCode);
+				try {
+					boolean success = client.login(loginParam.get("url"),loginMap);
+					ReportUtil.log("login :" + success);
+					if (!success) {
+						continue;	
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				break;			
+			}
+			
+
+		}
+	}
 	@Parameters({ "excelPath", "sheetName" })
 	@BeforeTest
-	public void readData(@Optional("case/api-data.xls") String excelPath, @Optional("Sheet1") String sheetName) throws DocumentException {
+	public void readData(@Optional("case/api-data.xlsx") String excelPath, @Optional("Sheet1") String sheetName) throws DocumentException {
 		dataList = readExcelData(ApiDataBean.class, excelPath.split(";"),
 				sheetName.split(";"));
 	}
@@ -129,67 +190,39 @@ public class ApiTest extends TestBase {
 	@Test(dataProvider = "apiDatas")
 	public void apiTest(ApiDataBean apiDataBean) throws Exception {
 		ReportUtil.log("--- test start ---");
-		if (apiDataBean.getSleep() > 0) {
+		/*if (apiDataBean.getSleep() > 0) {
 			// sleep休眠时间大于0的情况下进行暂停休眠
 			ReportUtil.log(String.format("sleep %s seconds",
 					apiDataBean.getSleep()));
 			Thread.sleep(apiDataBean.getSleep() * 1000);
-		}
-		String apiParam = buildRequestParam(apiDataBean);
-		// 封装请求方法
-		HttpUriRequest method = parseHttpRequest(apiDataBean.getUrl(),
-				apiDataBean.getMethod(), apiParam);
+		}*/
+	
+		String url = parseUrl(apiDataBean.getUrl());
+		String method = (apiDataBean.getMethod());
 		String responseData;
+		ClientWrapper clientWrapper;
 		try {
 			// 执行
-			HttpResponse response = client.execute(method);
-			int responseStatus = response.getStatusLine().getStatusCode();
+			clientWrapper = client.sendHttpRequest(url, method,  apiDataBean.getParam());
+			int responseStatus = clientWrapper.getResponseCode();
 			ReportUtil.log("返回状态码："+responseStatus);
 			if (apiDataBean.getStatus()!= 0) {
 				Assert.assertEquals(responseStatus, apiDataBean.getStatus(),
 						"返回状态码与预期不符合!");
 			} 
-//			else {
-//				// 非2开头状态码为异常请求，抛异常后会进行重跑
-//				if (200 > responseStatus || responseStatus >= 300) {
-//					ReportUtil.log("返回状态码非200开头："+EntityUtils.toString(response.getEntity(), "UTF-8"));
-//					throw new ErrorRespStatusException("返回状态码异常："
-//							+ responseStatus);
-//				}
-//			}
-			HttpEntity respEntity = response.getEntity();
-			Header respContentType = response.getFirstHeader("Content-Type");
-			if (respContentType != null && respContentType.getValue() != null 
-					&&  (respContentType.getValue().contains("download") || respContentType.getValue().contains("octet-stream"))) {
-				String conDisposition = response.getFirstHeader(
-						"Content-disposition").getValue();
-				String fileType = conDisposition.substring(
-						conDisposition.lastIndexOf("."),
-						conDisposition.length());
-				String filePath = "download/" + RandomUtil.getRandom(8, false)
-						+ fileType;
-				InputStream is = response.getEntity().getContent();
-				Assert.assertTrue(FileUtil.writeFile(is, filePath), "下载文件失败。");
-				// 将下载文件的路径放到{"filePath":"xxxxx"}进行返回
-				responseData = "{\"filePath\":\"" + filePath + "\"}";
-			} else {
-//				responseData = DecodeUtil.decodeUnicode(EntityUtils
-//						.toString(respEntity));
-				responseData=EntityUtils.toString(respEntity, "UTF-8");
-			}
+			
+			
+			responseData = clientWrapper.getResponseBody();
+			String[] verifyStr =  apiDataBean.getVerify().split("\n");
+			verifyReponseBody(responseData, verifyStr, false);
 		} catch (Exception e) {
 			throw e;
 		} finally {
-			method.abort();
+			
 		}
 		// 输出返回数据log
-		ReportUtil.log("resp:" + responseData);
-		// 验证预期信息
-		verifyResult(responseData, apiDataBean.getVerify(),
-				apiDataBean.isContains());
-
-		// 对返回结果进行提取保存。
-		saveResult(responseData, apiDataBean.getSave());
+		ReportUtil.log("response:" + clientWrapper.getResponseBody());
+	
 	}
 
 	private String buildRequestParam(ApiDataBean apiDataBean) {

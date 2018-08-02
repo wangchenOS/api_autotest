@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root>
-    <rootUrl>http://apis.baidu.com</rootUrl>
+    <rootUrl>http://qa-dsp2.suanshubang.com</rootUrl>
     <headers>
         <!-- 配置为自己的参数 -->
-        <header name="apikey" value="123456"></header>
+        <header name="Content-Type" value="application/json"></header>
     </headers>
     <params>
-    	<param name="test" value="value"></param>
+    	<!-- <param name="userName" value="value"></param> -->
+    	<param name="startTime" value="1532015000000"></param>
+    	<param name="endTime" value="1532016000000"></param>
     </params>
+    <isLogin>true</isLogin>
+    <loginParams>
+        <loginParam name="url" value="http://qa-dsp2.suanshubang.com/dsp-admin/user/login"></loginParam>
+    	<loginParam name="userName" value="test"></loginParam>
+    	<loginParam name="password" value="test"></loginParam>
+    	<loginParam name="identifyCode" value="http://qa-dsp2.suanshubang.com/dsp-admin/captcha.jpg"></loginParam>
+    	<loginParam name="saveIdentifyCodePicPath" value="E:\\Java\\api_autotest\\captcha.jpg"></loginParam>
+    </loginParams>
     <project_name>接口自动化测试报告demo</project_name>
 </root>
