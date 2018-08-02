@@ -31,7 +31,12 @@ public class MyImgFilter {
 
 	private static final Tesseract TESSREACT = new Tesseract();
 	static {
-		TESSREACT.setDatapath("E:\\Java\\tessdata");
+		String path = System.getProperty("user.dir");
+		path = path.substring(0, path.lastIndexOf("\\") + 1);
+		path += "tessdata";
+		
+		TESSREACT.setLanguage("eng");
+		TESSREACT.setDatapath(path);
 	}
 
 	public MyImgFilter(BufferedImage image) {
@@ -273,7 +278,7 @@ public class MyImgFilter {
 		
 	}
 	public static void main(String[] args) throws IOException {
-
+		System.out.println("");
 		/*
 		 * String url = "http://qa-dsp2.suanshubang.com/dsp-admin/captcha.jpg";
 		 * ClientWrapper client = null;
