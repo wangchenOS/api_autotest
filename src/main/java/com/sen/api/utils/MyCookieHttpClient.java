@@ -54,11 +54,18 @@ public class MyCookieHttpClient extends MyHttpClient{
 	
 		ClientWrapper client = null;
 		client = sendHttpPostJsonBody(url, loginJson, false);
-		
-		JSONObject jsonStr = JSONObject.parseObject(client.getResponseBody());
-		if (jsonStr != null && jsonStr.getInteger("status") == 0)
-			return true;
-		return false;
+
+		try {
+			JSONObject jsonStr = JSONObject.parseObject(client.getResponseBody());
+			if (jsonStr != null && jsonStr.getInteger("status") == 0)
+				return true;
+			return false;
+
+		}catch (Exception e) {
+			ReportUtil.log("Response Error:" + client.getResponseBody());
+			throw new Exception("Parse login response error!");
+		}
+
 	}
 	
 	public ClientWrapper sendHttpGetBinary(String url,boolean isNeedClose) throws Exception {

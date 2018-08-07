@@ -89,20 +89,20 @@
 	</build>
 
 	<dependencies>
-		<dependency>
+	<!-- 	<dependency>
 			<groupId>com.sen</groupId>
 			<artifactId>reportng</artifactId>
 			<version>1.1.9</version>
 			<scope>system</scope>
 			<systemPath>${project.basedir}/libs/reportng-1.1.9.jar</systemPath>
-		</dependency>
-		<dependency>
+		</dependency> -->
+		<!-- <dependency>
 			<groupId>com.sen</groupId>
 			<artifactId>velocity</artifactId>
 			<version>1.7-dep</version>
 			<scope>system</scope>
 			<systemPath>${project.basedir}/libs/velocity-1.7-dep.jar</systemPath>
-		</dependency>
+		</dependency> -->
 		<dependency>
 			<groupId>com.google.inject</groupId>
 			<artifactId>guice</artifactId>
@@ -112,7 +112,7 @@
 		<dependency>
 			<groupId>com.aventstack</groupId>
 			<artifactId>extentreports</artifactId>
-			<version>3.0.3</version>
+			<version>3.1.5</version>
 		</dependency>
 		<dependency>
 			<groupId>org.testng</groupId>

@@ -113,7 +113,7 @@ public class ApiTest extends TestBase {
 	}
 
 	
-	private void login()
+	private void login() throws Exception
 	{
 		String imageUrl = loginParam.get("identifyCode");
 		ClientWrapper clientWrapper = null;
@@ -123,7 +123,7 @@ public class ApiTest extends TestBase {
 				clientWrapper = client.sendHttpGetBinary(imageUrl, false);
 				
 			} catch (Exception e1) {
-				e1.printStackTrace();
+				throw e1;
 			}
 			
 			String identifyCodePicPath = "captcha.jpg";
@@ -131,7 +131,7 @@ public class ApiTest extends TestBase {
 			try {
 				MyImgFilter.savePic(identifyCodePicPath);
 			} catch (IOException e1) {
-				e1.printStackTrace();
+				throw new Exception(e1.getMessage());
 			}
 			
 			String identifyCode = MyImgFilter.doOCR("captcha_result.jpg");
@@ -154,11 +154,11 @@ public class ApiTest extends TestBase {
 						continue;	
 					}
 				} catch (Exception e) {
-					e.printStackTrace();
+					throw e;
 				}
-				break;			
+				break;
 			}
-			
+
 
 		}
 	}

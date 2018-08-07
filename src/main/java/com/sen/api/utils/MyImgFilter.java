@@ -226,6 +226,11 @@ public class MyImgFilter {
 	public static void savePic(String path) throws IOException {
 		FileInputStream fin = new FileInputStream(path);
 		BufferedImage bi = ImageIO.read(fin);
+
+		if(bi== null) {
+			ReportUtil.log("Download identify pic failed!Please check the url");
+			throw  new IOException("Image file input stream error!");
+		}
 		MyImgFilter flt = new MyImgFilter(bi);
 		flt.changeGrey();
 		flt.getGrey();

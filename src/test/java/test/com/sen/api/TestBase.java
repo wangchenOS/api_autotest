@@ -133,7 +133,7 @@ public class TestBase {
 		}
 	}
 
-	protected void verifyReponseBody(String sourceData, String[] verifyStr,boolean contains) {
+	protected void verifyReponseBody(String sourceData, String[] verifyStr,boolean contains) throws Exception{
 		if (verifyStr == null || verifyStr.length == 0) {
 			return;
 		}
@@ -148,7 +148,16 @@ public class TestBase {
 			for(int i = 2; i< strArray.length; i++) {
 				jsonPath.add(strArray[i]);
 			}
-			String actualValue = JsonUtil.getJsonObject(sourceData, jsonPath);
+
+            String actualValue = "";
+			try {
+				actualValue = JsonUtil.getJsonObject(sourceData, jsonPath);
+			}catch (Exception e) {
+                ReportUtil.log("Parse response date error!");
+                ReportUtil.log("Response data :\n" + sourceData);
+                throw new Exception(e.getMessage());
+			}
+
 			ReportUtil.log("actualValue:" + actualValue + ", exceptValue:" + exceptValue);
 			Assert.assertEquals(actualValue, exceptValue, "验证预期结果失败。");
 		}
